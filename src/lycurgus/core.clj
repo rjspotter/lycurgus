@@ -24,13 +24,24 @@
       (contract sqrt-back "sqrt of result equals input"
                 [n] [number? => (= (math/abs n) (math/sqrt %))])
       ))
-  (is (= true (:result (tc/quick-check 200 (prop/for-all
-                                            [v (gen/one-of [gen/int])]
-                                            (sqr v))))))
-;  (is (= true (:result (tc/quick-check 200 (prop/for-all
-;                                            [v (gen/such-that #(false? (Double/isNaN %)) gen/double)]
-;                                            (println v)
-;                                            (sqr v))))))
+  (is (= true (let [res (tc/quick-check 200 (prop/for-all
+                                             [v (gen/one-of [gen/int])]
+                                             (not= :assert-caught
+                                                   (try
+                                                     (sqr v)
+                                                     (catch AssertionError e :assert-caught)))))]
+                (if (:result res) true res))))
+
+  (is (= true (let [res (tc/quick-check 200 (prop/for-all
+                                             [v (gen/one-of [gen/keyword
+                                                            gen/boolean
+                                                            (gen/vector gen/int)
+                                                            (gen/list gen/int)])]
+                                             (= :assert-caught
+                                                   (try
+                                                     (sqr v)
+                                                     (catch AssertionError e :assert-caught)))))]
+                (if (:result res) true res))))
   )
 
 (defrecord City [grain citizens land])
