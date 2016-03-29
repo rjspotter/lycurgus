@@ -4,6 +4,7 @@
             [clojure.test.check.properties :as prop]
             [clojure.test :refer :all]
             [clojure.core.contracts :refer :all]
+            [clojure.core.contracts.constraints :refer :all]
             [clojure.math.numeric-tower :as math])
   )
 
@@ -12,37 +13,52 @@
   [& args]
   (println "Hello, World!"))
 
-(with-test
-  (def sqr
-    "Generic squaring function"
-    (with-constraints
-      (fn [x] (* x x))
-      (contract nummy "ensures numbers"
-                [n] [number? => number?])
-      (contract positive "result positive"
-                [n] [number? => (>= % 0)])
-      (contract sqrt-back "sqrt of result equals input"
-                [n] [number? => (= (math/abs n) (math/sqrt %))])
-      ))
-  (is (= true (let [res (tc/quick-check 200 (prop/for-all
-                                             [v (gen/one-of [gen/int])]
-                                             (not= :assert-caught
-                                                   (try
-                                                     (sqr v)
-                                                     (catch AssertionError e :assert-caught)))))]
-                (if (:result res) true res))))
+(defmacro predict-to [generator application]
+  `(do
+     (def res#
+       (clojure.test.check/quick-check
+                            200
+                            (clojure.test.check.properties/for-all
+                             ~generator
+                             (clojure.core/not=
+                              :assert-caught
+                              (try
+                                ~application
+                                (catch java.lang.AssertionError e# :assert-caught))))))
+     (clojure.test/is
+      (clojure.core/= true
+                  (if (:result res#) true res#)))))
 
-  (is (= true (let [res (tc/quick-check 200 (prop/for-all
-                                             [v (gen/one-of [gen/keyword
-                                                            gen/boolean
-                                                            (gen/vector gen/int)
-                                                            (gen/list gen/int)])]
-                                             (= :assert-caught
-                                                   (try
-                                                     (sqr v)
-                                                     (catch AssertionError e :assert-caught)))))]
-                (if (:result res) true res))))
-  )
+(defmacro predict-not [generator application]
+  `(do
+     (def res#
+       (clojure.test.check/quick-check
+                            200
+                            (clojure.test.check.properties/for-all
+                             ~generator
+                             (clojure.core/not=
+                              :assert-caught
+                              (try
+                                ~application
+                                (catch java.lang.AssertionError e# :assert-caught))))))
+     (clojure.test/is
+      (clojure.core/= true
+                  (if (:result res#) res# true)))))
+
+(with-test
+  (defconstrainedfn sqr
+    [n] [number? => number? (>= % 0) (= (math/abs n) (math/sqrt %))]
+    (* n n))
+  
+  (predict-to [v (gen/one-of [gen/int])] (sqr v))
+  (predict-not [v (gen/one-of [gen/keyword
+                           gen/boolean
+                           (gen/vector gen/int)
+                           (gen/list gen/int)])]
+           (sqr v)))
+
+
+
 
 (defrecord City [grain citizens land])
 
