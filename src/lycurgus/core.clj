@@ -57,9 +57,33 @@
                            (gen/list gen/int)])]
            (sqr v)))
 
-
-
-
+; A citizen needs 20 bushels a year.
+; An acre takes one bushel to seed.
 (defrecord City [grain citizens land])
 
-(defrecord Spend [feed seed buy])
+(defrecord Spend [feed seed buy]) ; spends are in bushels
+
+(defrecord RealEstate [sell buy])
+
+(def *evil-root* (atom (list (->City 2800 100 1000))))
+
+(defn now [] (first *evil-root*))
+
+(with-test
+  (defconstrainedfn feed
+    "Feeding the citizens: each Citizen eats 20 bushels of wheat per year"
+    [city spend]
+    [(integer? (:feed spend))
+     (integer? (:grain city))
+     (integer? (:citizens city))
+     =>
+     (not (nil? %))
+     (<= (:grain %)    (:grain city))
+     (<= (:citizens %) (:citizens city))
+     (=  (:land %)     (:land city))
+     (integer? (:grain %))
+     (integer? (:citizens %))
+     ]
+    (let [f (* 20 (:feed spend)) g (:grain city) c (:citizens city)]
+      (->City (- g f) (min c f) (:land city))
+    )))
