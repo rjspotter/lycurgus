@@ -63,7 +63,7 @@
 
 (defrecord Spend [feed seed buy]) ; spends are in bushels
 
-(defrecord RealEstate [sell buy])
+(defrecord Army [pillage conquer]) ; Cost to conquer in bushels ; Amount gained by pillage and burning occupied land
 
 (def *evil-root* (atom (list (->City 2800 100 1000))))
 
@@ -73,17 +73,19 @@
   (defconstrainedfn feed
     "Feeding the citizens: each Citizen eats 20 bushels of wheat per year"
     [city spend]
-    [(integer? (:feed spend))
-     (integer? (:grain city))
-     (integer? (:citizens city))
+    [(every? integer?  [(:feed spend) (:grain city) (:citizens city)])
+     (every? #(>= % 0) [(:feed spend) (:grain city) (:citizens city)])
      =>
      (not (nil? %))
      (<= (:grain %)    (:grain city))
      (<= (:citizens %) (:citizens city))
      (=  (:land %)     (:land city))
-     (integer? (:grain %))
-     (integer? (:citizens %))
+     (every? integer? [(:grain %) (:citizens %)])
+     (every? #(>= % 0) [(:grain %) (:citizens %)])
      ]
-    (let [f (* 20 (:feed spend)) g (:grain city) c (:citizens city)]
-      (->City (- g f) (min c f) (:land city))
+    (let [f (:feed spend)
+          g (:grain city)
+          c (:citizens city)
+          s (int (/ f 20))]
+      (->City (- g f) (min c s) (:land city))
     )))
