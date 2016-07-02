@@ -82,8 +82,13 @@
                     [grain gen/pos-int citizens gen/pos-int land gen/pos-int exchange gen/pos-int]
                   (->Turn (->City grain citizens land)
                           (->Army exchange exchange)
-                          (->Spend (int (/ grain 20)) (min grain land) (int (/ grain (+ 1 exchange))) 0))
-                  ))
+                          (->Spend (int (/ grain 20)) (min grain land) (int (/ grain (+ 1 exchange))) 0))))
+
+(def invalid-turn(gen/let
+                    [grain gen/pos-int citizens gen/pos-int land gen/pos-int exchange gen/pos-int multiple gen/pos-int]
+                  (->Turn (->City grain citizens land)
+                          (->Army exchange exchange)
+                          (->Spend (int (* grain multiple)) (max grain land) (int (* grain exchange)) 0))))
 
 (with-test
   (defconstrainedfn feed
@@ -106,7 +111,8 @@
           s (int (/ f 20))]
       (assoc city :grain (- g f) :citizens (min c s))
       ))
-  (predict-to [t valid-turn] (feed t)))
+  (predict-to  [t valid-turn]   (feed t))
+  (predict-not [t invalid-turn] (feed t)))
 
 (with-test
   (defconstrainedfn sow
@@ -127,15 +133,16 @@
           g (:grain city)]
       (->City (- g s) (:citizens city) (:land city))
       ))
-  (predict-to [t valid-turn] (sow t)))
+  (predict-to  [t valid-turn]   (feed t))
+  (predict-not [t invalid-turn] (feed t)))
 
 (with-test
   (defconstrainedfn conquor
     "Conquer : feeding the army extra so they can effectively kill their neighbors and take their land"
     [{city :city spend :spend army :army}]
-    [(every? integer?  [(:warfare spend) (:grain city) (:citizens city)])
-     (every? #(>= % 0) [(:warfare spend) (:grain city) (:citizens city)])
-     (<= (:warfare spend) (:grain city))
+    [(every? integer?  [(:conquor spend) (:grain city) (:citizens city)])
+     (every? #(>= % 0) [(:conquor spend) (:grain city) (:citizens city)])
+     (<= (:conquor spend) (:grain city))
      =>
      (not (nil? %))
      (<= (:grain %)    (:grain city))
@@ -144,13 +151,14 @@
      (every? integer? [(:grain %) (:citizens %) (:land %)])
      (every? #(>= % 0) [(:grain %) (:citizens % (:land %))])
      ]
-    (let [spent (:warfare spend)
+    (let [spent (:conquor spend)
           grain (:grain city)
           cost  (:conquor army)
           ]
       (->City (- grain spent) (:citizens city) (+ (:land city) (int (Math/floor (/ spent cost)))))
       ))
-  (predict-to [t valid-turn] (conquor t)))
+  (predict-to  [t valid-turn]   (feed t))
+  (predict-not [t invalid-turn] (feed t)))
 
 
 (with-test
@@ -174,5 +182,6 @@
           ]
       (->City (- grain spent) (:citizens city) (+ (:land city) (int (Math/floor (/ spent cost)))))
       ))
-  (predict-to [t valid-turn] (pillage t)))
+  (predict-to  [t valid-turn]   (feed t))
+  (predict-not [t invalid-turn] (feed t)))
 
