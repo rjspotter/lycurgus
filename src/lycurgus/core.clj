@@ -92,46 +92,45 @@
 
 (with-test
   (defconstrainedfn feed
-    "Feeding the citizens: each Citizen eats 20 bushels of wheat per year"
-    [{city :city spend :spend}]
+    "Feeding the citizens: each Citizen eats 20 bushels of wheat per year | overspending is lost"
+    [{city :city spend :spend :as turn}]
     [(every? integer?  [(:feed spend) (:grain city) (:citizens city)])
      (every? #(>= % 0) [(:feed spend) (:grain city) (:citizens city)])
      (<= (:feed spend) (:grain city))
      =>
      (not (nil? %))
-     (<= (:grain %)    (:grain city))
-     (<= (:citizens %) (:citizens city))
-     (=  (:land %)     (:land city))
-     (every? integer? [(:grain %) (:citizens %) (:land %)])
-     (every? #(>= % 0) [(:grain %) (:citizens % (:land %))])
+     (<= (:grain (:city %))    (:grain city))
+     (<= (:citizens (:city %)) (:citizens city))
+     (=  (:land (:city %))     (:land city))
+     (every? integer? [(:grain (:city %)) (:citizens (:city %)) (:land (:city %))])
+     (every? #(>= % 0) [(:grain (:city %)) (:citizens (:city %)) (:land (:city %))])
      ]
     (let [f (:feed spend)
           g (:grain city)
           c (:citizens city)
           s (int (/ f 20))]
-      (assoc city :grain (- g f) :citizens (min c s))
-      ))
+      (assoc turn :city (assoc city :grain (- g f) :citizens (min c s)))))
   (predict-to  [t valid-turn]   (feed t))
   (predict-not [t invalid-turn] (feed t)))
 
 (with-test
   (defconstrainedfn sow
-    "Sow the seeds for next year's crop"
-    [{city :city spend :spend}]
+    "Sow the seeds for next year's crop | overspending is lost"
+    [{city :city spend :spend :as turn}]
     [(every? integer?  [(:seed spend) (:grain city) (:citizens city)])
      (every? #(>= % 0) [(:seed spend) (:grain city) (:citizens city)])
      (<= (:seed spend) (:grain city))
      =>
      (not (nil? %))
-     (<= (:grain %)    (:grain city))
-     (=  (:citizens %) (:citizens city))
-     (=  (:land %)     (:land city))
-     (every? integer? [(:grain %) (:citizens %) (:land %)])
-     (every? #(>= % 0) [(:grain %) (:citizens % (:land %))])
+     (<= (:grain (:city %))    (:grain city))
+     (<= (:citizens (:city %)) (:citizens city))
+     (=  (:land (:city %))     (:land city))
+     (every? integer? [(:grain (:city %)) (:citizens (:city %)) (:land (:city %))])
+     (every? #(>= % 0) [(:grain (:city %)) (:citizens (:city %)) (:land (:city %))])
      ]
     (let [s (:seed spend)
           g (:grain city)]
-      (->City (- g s) (:citizens city) (:land city))
+      (assoc turn :city (->City (- g s) (:citizens city) (:land city)))
       ))
   (predict-to  [t valid-turn]   (feed t))
   (predict-not [t invalid-turn] (feed t)))
@@ -139,7 +138,7 @@
 (with-test
   (defconstrainedfn conquor
     "Conquer : feeding the army extra so they can effectively kill their neighbors and take their land"
-    [{city :city spend :spend army :army}]
+    [{city :city spend :spend army :army :as turn}]
     [(every? integer?  [(:conquor spend) (:grain city) (:citizens city)])
      (every? #(>= % 0) [(:conquor spend) (:grain city) (:citizens city)])
      (<= (:conquor spend) (:grain city))
@@ -164,7 +163,7 @@
 (with-test
   (defconstrainedfn pillage
     "Pillage : Strip a piece of land of it's resources leaving an unusable husk"
-    [{city :city spend :spend army :army}]
+    [{city :city spend :spend army :army :as turn}]
     [(every? integer?  [(:pillage spend) (:grain city) (:citizens city)])
      (every? #(>= % 0) [(:pillage spend) (:grain city) (:citizens city)])
      (<= (:pillage spend) (:grain city))
@@ -184,4 +183,3 @@
       ))
   (predict-to  [t valid-turn]   (feed t))
   (predict-not [t invalid-turn] (feed t)))
-
