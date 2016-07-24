@@ -154,7 +154,7 @@
           grain (:grain city)
           cost  (:conquor army)
           ]
-      (->City (- grain spent) (:citizens city) (+ (:land city) (int (Math/floor (/ spent cost)))))
+      (assoc turn :city (->City (- grain spent) (:citizens city) (+ (:land city) (int (Math/floor (/ spent cost))))))
       ))
   (predict-to  [t valid-turn]   (feed t))
   (predict-not [t invalid-turn] (feed t)))
@@ -169,17 +169,40 @@
      (<= (:pillage spend) (:grain city))
      =>
      (not (nil? %))
-     (<= (:grain %)    (:grain city))
-     (=  (:citizens %) (:citizens city))
-     (>= (:land %)     (:land city))
-     (every? integer? [(:grain %) (:citizens %) (:land %)])
-     (every? #(>= % 0) [(:grain %) (:citizens % (:land %))])
+     (>= (:grain (:city %))    (:grain city))
+     (=  (:citizens (:city %)) (:citizens city))
+     (<= (:land (:city %))     (:land city))
+     (every? integer? [(:grain (:city %)) (:citizens (:city %)) (:land (:city %))])
+     (every? #(>= % 0) [(:grain (:city %)) (:citizens (:city %)) (:land (:city %))])
      ]
     (let [spent (:pillage spend)
-          grain (:grain city)
-          cost  (:conquor army)
+          yield  (:pillage army)
           ]
-      (->City (- grain spent) (:citizens city) (+ (:land city) (int (Math/floor (/ spent cost)))))
+      (assoc turn :city (->City (+ (:grain city) (int (Math/floor (* spent yield)))) (:citizens city) (- (:land city) spent)))
       ))
   (predict-to  [t valid-turn]   (feed t))
   (predict-not [t invalid-turn] (feed t)))
+
+(with-test
+  (defconstrainedfn reap
+    "Reap : Gather all the grown wheat you sowed earlier"
+    [{city :city spend :spend army :army :as turn}]
+    [(every? integer?  [(:pillage spend) (:grain city) (:citizens city)])
+     (every? #(>= % 0) [(:pillage spend) (:grain city) (:citizens city)])
+     (<= (:pillage spend) (:grain city))
+     =>
+     (not (nil? %))
+     (>= (:grain (:city %))    (:grain city))
+     (=  (:citizens (:city %)) (:citizens city))
+     (<= (:land (:city %))     (:land city))
+     (every? integer? [(:grain (:city %)) (:citizens (:city %)) (:land (:city %))])
+     (every? #(>= % 0) [(:grain (:city %)) (:citizens (:city %)) (:land (:city %))])
+     ]
+    (let [spent (:pillage spend)
+          yield  (:pillage army)
+          ]
+      (assoc turn :city (->City (+ (:grain city) (int (Math/floor (* spent yield)))) (:citizens city) (- (:land city) spent)))
+      ))
+  (predict-to  [t valid-turn]   (feed t))
+  (predict-not [t invalid-turn] (feed t)))
+
